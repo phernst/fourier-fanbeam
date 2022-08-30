@@ -143,6 +143,8 @@ def reconstruct(projections: torch.Tensor, beta_k: torch.Tensor,
     def _single_reco(dbeta: float):
         gamma_map = _compute_gamma_map(theta_map, beta_k + dbeta)  # [k, i, j]
         pi_map = _calculate_capital_pi_map(gamma_max, gamma_map)  # [k, i, j]
+        img = nib.Nifti1Image(np.fft.fftshift(gamma_map.cpu().numpy().transpose(), axes=(0, 1)), np.eye(4))
+        nib.save(img, 'bla.nii.gz')
         fanbeam_rebin = _rebin_fanbeam_projections(projections[0], gamma_map, gamma_max)
         return _compute_full_fourier_space(
             fanbeam_rebin,
@@ -247,7 +249,7 @@ def test_reco(path_to_volume: str):
     central_slice = torch.from_numpy(np_central_slice).float().cuda()[None]
     plt.imshow(central_slice[0].cpu().numpy(), vmin=0)
 
-    beta_k = torch.deg2rad(torch.linspace(0, 360, 811, device='cuda'))[:-1]
+    beta_k = torch.deg2rad(torch.linspace(-15, 180+15, 811, device='cuda'))[:-1]
     source_distance: float = 720.
     det_distance: float = 1080.
     det_count: int = 255
@@ -268,6 +270,7 @@ def test_reco(path_to_volume: str):
         sino, beta_k, fanradon,
         output_size=central_slice.shape[-1],
         apodization='hann',
+        shortscan=True,
     )
     plt.figure()
     plt.imshow(reco.cpu().numpy(), vmin=0, vmax=central_slice.max())
